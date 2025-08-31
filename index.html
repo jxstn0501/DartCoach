@@ -2,232 +2,582 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>🏹 DartsCoach Full</title>
+  <title>🏹 DartsCoach – OCR, Dashboard & Trainingsplan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    body{background:#121212;color:#eee;font-family:Arial,Helvetica,sans-serif;margin:0;padding:20px}
-    h1{color:#ffcc00}
-    .card{background:#1e1e1e;border:1px solid #333;border-radius:10px;padding:16px;margin:12px 0}
-    button{background:#ffcc00;border:none;border-radius:8px;padding:10px 14px;font-weight:bold;cursor:pointer}
-    .mono{white-space:pre-wrap;background:#111;border:1px solid #333;border-radius:8px;padding:10px;font-family:monospace}
-    .ok{color:#30d158}.err{color:#ff453a}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border:1px solid #333;padding:6px;text-align:center}
-    th{background:#2a2a2a}
+    :root{
+      --bg:#121212; --card:#1c1c1c; --ink:#eee; --muted:#bdbdbd; --brand:#ffcc00;
+      --ok:#30d158; --err:#ff453a;
+    }
+    *{box-sizing:border-box}
+    body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0}
+    header{position:sticky;top:0;z-index:2;background:#161616;padding:14px 16px;border-bottom:1px solid #222;display:flex;gap:10px;align-items:center}
+    header h1{margin:0;font-size:18px;color:var(--brand);font-weight:800}
+    main{padding:16px;max-width:1000px;margin:0 auto}
+    .card{background:var(--card);border:1px solid #242424;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+    h2{font-size:16px;margin:0 0 10px;font-weight:800}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row>*{flex:1 1 280px}
+    button{background:var(--brand);color:#000;border:none;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
+    button.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+    .mono{white-space:pre-wrap;word-break:break-word;background:#111;border:1px solid #222;border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
+    .small{font-size:12px;color:var(--muted)}
+    select,input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a2a;background:#111;color:#eee}
+
+    /* Dashboard fixes */
+    .chart-box{height:240px;position:relative}
+    #roundTable{max-height:400px;overflow-y:auto;display:block;margin-top:10px}
+    #roundTable table{width:100%;border-collapse:collapse}
+    #roundTable th,#roundTable td{border:1px solid #2a2a2a;padding:6px;text-align:center}
+    #roundTable th{background:#202020;position:sticky;top:0}
   </style>
 </head>
 <body>
-  <h1>🏹 DartsCoach (Full-Version)</h1>
+<header>
+  <h1>🏹 DartsCoach</h1>
+</header>
 
-  <!-- Config -->
+<main>
+
+  <!-- CONFIG -->
   <div class="card">
     <h2>🔑 Konfiguration</h2>
-    <p>API-Keys im Code hinterlegen.</p>
-    <div id="cfgStatus" class="ok">✓ Keys geladen</div>
+    <div class="row">
+      <div>
+        <label class="small">OCR Backend (Cloud Run URL)</label>
+        <input id="cfgOcrUrl" placeholder="https://...run.app/" />
+      </div>
+      <div>
+        <label class="small">OpenAI API Key (gpt-4o-mini)</label>
+        <input id="cfgOpenAI" placeholder="sk-..." />
+      </div>
+      <div>
+        <label class="small">Notion API Key</label>
+        <input id="cfgNotion" placeholder="secret_..." />
+      </div>
+      <div>
+        <label class="small">Notion Database ID</label>
+        <input id="cfgDb" placeholder="32-stellige-ID" />
+      </div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btnSaveCfg">Speichern</button>
+      <button class="ghost" id="btnLoadCfg">Laden</button>
+      <span id="cfgStatus" class="small"></span>
+    </div>
+    <p class="small" style="margin-top:8px">Für ultraschnelles Test-Hosting nutze <b>Netlify Drop</b> (app.netlify.com/drop).</p>
   </div>
 
   <!-- OCR -->
   <div class="card">
     <h2>📤 Screenshot importieren & OCR</h2>
-    <input type="file" id="fileInput" accept="image/*" />
-    <button id="btnOCR">OCR starten</button>
-    <div id="ocrStatus" style="margin-top:8px"></div>
-    <div id="ocrText" class="mono" style="margin-top:10px;min-height:120px">
-      OCR-Ergebnis erscheint hier…
+    <div class="row">
+      <div>
+        <input type="file" id="fileInput" accept="image/*" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="btnOCR">OCR starten</button>
+          <button class="ghost" id="btnClear">Löschen</button>
+        </div>
+        <div id="ocrStatus" class="small" style="margin-top:8px"></div>
+      </div>
+      <div>
+        <div id="ocrText" class="mono" style="min-height:110px">OCR-Ergebnis erscheint hier…</div>
+      </div>
     </div>
   </div>
 
-  <!-- Dashboard -->
+  <!-- PLAYER PICKER -->
+  <div class="card">
+    <h2>🧑‍🤝‍🧑 Spieler</h2>
+    <div class="row">
+      <div>
+        <label class="small">Spieler auswählen</label>
+        <select id="playerSelect"></select>
+      </div>
+      <div style="align-self:flex-end">
+        <button class="ghost" id="btnSwap">Reihenfolge tauschen</button>
+      </div>
+    </div>
+    <div id="playerHint" class="small" style="margin-top:6px"></div>
+  </div>
+
+  <!-- DASHBOARD -->
   <div class="card">
     <h2>📊 Dashboard</h2>
-    <canvas id="scoreChart" height="120"></canvas>
+    <div class="chart-box">
+      <canvas id="scoreChart"></canvas>
+    </div>
     <div id="roundTable"></div>
   </div>
 
-  <!-- Trainingsplan -->
+  <!-- PLAN -->
   <div class="card">
     <h2>🎯 Trainingsplan</h2>
-    <button id="btnPlan">Trainingsplan erstellen</button>
-    <button id="btnNotion">Nach Notion senden</button>
-    <div id="planOut" class="mono" style="margin-top:10px;min-height:200px">
-      Hier erscheint dein Trainingsplan…
+    <div class="row">
+      <div>
+        <button id="btnPlan">Trainingsplan (letzte 3–5 Runden)</button>
+        <button class="ghost" id="btnNotion">Nach Notion speichern</button>
+      </div>
     </div>
+    <div id="planOut" class="mono" style="margin-top:10px;min-height:220px">Hier erscheint dein Trainingsplan…</div>
   </div>
 
-  <script>
-    /***************
-     * CONFIG
-     ***************/
-    const CONFIG = {
-      OPENAI_API_KEY: "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",
-      NOTION_API_KEY: "ntn_K59984412336U5L12FBf7D9XSdOJVnbYWZMs1bTHswR72m",
-      NOTION_DATABASE_ID: "26016588f31180099413d2ebd9ccbe38",
-      OCR_BACKEND: "https://visionnow-81553987588.europe-west1.run.app/"
-    };
+</main>
 
-    const $ = sel => document.querySelector(sel);
+<script>
+/* ======================
+   CONFIG & STORAGE
+====================== */
+const LS = { CFG:'dc_cfg', OCR:'dc_ocr', PARSED:'dc_parsed', ORDER:'dc_player_order' };
 
-    /***************
-     * OCR & FILE
-     ***************/
-    function fileToBase64(file){
-      return new Promise((resolve,reject)=>{
-        const r = new FileReader();
-        r.onload = ()=> resolve(r.result.split(',')[1]);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-    }
+const CONFIG = {
+  OCR_BACKEND: "https://visionnow-81553987588.europe-west1.run.app/",
+  OPENAI_API_KEY: "",
+  NOTION_API_KEY: "",
+  NOTION_DATABASE_ID: ""
+};
 
-    async function runOCR(base64){
-      const res = await fetch(CONFIG.OCR_BACKEND, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ imageBase64: base64 })
-      });
-      const json = await res.json();
-      if(json.error) throw new Error(json.error);
-      return json?.textAnnotations?.[0]?.description 
-          || json?.fullTextAnnotation?.text 
-          || JSON.stringify(json,null,2);
-    }
+const $ = s => document.querySelector(s);
+function saveLocal(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function loadLocal(k,def=null){ try{const v=localStorage.getItem(k); return v?JSON.parse(v):def;}catch{ return def; }}
 
-    /***************
-     * PARSER
-     ***************/
-    function pointsOfToken(tok){
-      const t = String(tok).toUpperCase().trim();
-      if(/^T(\d{1,2})$/.test(t)) return 3*parseInt(t.slice(1),10);
-      if(/^D(\d{1,2})$/.test(t)) return 2*parseInt(t.slice(1),10);
-      if(/^(S)?(\d{1,2})$/.test(t)) return parseInt(t.replace('S',''),10);
-      if(["BULL","DBULL","BULLSEYE","50"].includes(t)) return 50;
-      if(["25","OBULL"].includes(t)) return 25;
-      if(["MISS","0","-"].includes(t)) return 0;
-      return NaN;
-    }
+/* ======================
+   FILE & OCR
+====================== */
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result.split(',')[1]);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
 
-    function parseDartsSmart(line,expected){
-      let tokens=(line.match(/\b(T\d{1,2}|D\d{1,2}|\d{1,3}|25|50|BULL|MISS)\b/ig)||[]);
-      if(tokens.length>=3) return tokens.slice(0,3);
-      while(tokens.length<3) tokens.push("0");
-      return tokens;
-    }
+async function runOCR(base64){
+  const url = CONFIG.OCR_BACKEND;
+  const res = await fetch(url, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ imageBase64: base64 })
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json?.textAnnotations?.[0]?.description
+      || json?.fullTextAnnotation?.text
+      || JSON.stringify(json,null,2);
+}
 
-    function parseDartsmind(ocrText){
-      const lines=ocrText.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      const rounds=[]; let currentStart=501;
-      for(let i=0;i<lines.length;i++){
-        const m=lines[i].match(/^RUNDE\s+(\d+)/i); if(!m) continue;
-        const r=parseInt(m[1],10); const block=[]; let j=i+1;
-        while(j<lines.length && !/^RUNDE\s+\d+/i.test(lines[j])){block.push(lines[j]);j++;}
-        i=j-1;
-        const nums=block.filter(x=>/^\d{1,3}$/.test(x));
-        const score=nums.length?parseInt(nums[nums.length-1],10):null;
-        const dartsLine=block.find(x=>/[TD]?\d+/.test(x))||"";
-        const darts=parseDartsSmart(dartsLine,score);
-        const roundScore=darts.reduce((a,t)=>a+(pointsOfToken(t)||0),0);
-        const bust=/BUST/i.test(block.join(" "));
-        const end=bust?currentStart:Math.max(currentStart-roundScore,0);
-        rounds.push({round:r,start:currentStart,darts,score:roundScore,bust,end});
-        currentStart=end;
+/* ======================
+   PARSER HELPERS
+====================== */
+function pointsOfToken(tok){
+  const t=String(tok).toUpperCase().trim();
+  if(/^T(\d{1,2})$/.test(t)) return 3*parseInt(t.slice(1),10);
+  if(/^D(\d{1,2})$/.test(t)) return 2*parseInt(t.slice(1),10);
+  if(/^(S)?(\d{1,2})$/.test(t)) return parseInt(t.replace('S',''),10);
+  if(["BULL","DBULL","BULLSEYE","50"].includes(t)) return 50;
+  if(["25","OBULL"].includes(t)) return 25;
+  if(["MISS","0","-"].includes(t)) return 0;
+  return NaN;
+}
+const validSingle = n => (n>=0 && n<=20) || n===25 || n===50;
+
+// „555“ → [5,5,5] ; „212“ → [2,12] oder [21,2] (nur gültige Singles)
+function splitDigitsSmart(numStr){
+  if(!/^\d{3}$/.test(numStr)) return [];
+  // 555 → 5,5,5
+  if(/^(\d)\1\1$/.test(numStr)){
+    const d = parseInt(numStr[0],10);
+    return [[String(d),String(d),String(d)]];
+  }
+  const a = parseInt(numStr.slice(0,1),10), b = parseInt(numStr.slice(1),10);
+  const c = parseInt(numStr.slice(0,2),10), d = parseInt(numStr.slice(2),10);
+  const out = [];
+  if(validSingle(a) && validSingle(b)) out.push([String(a), String(b)]);
+  if(validSingle(c) && validSingle(d)) out.push([String(c), String(d)]);
+  return out;
+}
+
+// baue genau 3 Darts; nutze expectedScore wenn vorhanden
+function parseDartsSmart(line, expected){
+  if(!line) return ["0","0","0"];
+  let raw = (line.match(/\b(T\d{1,2}|D\d{1,2}|\d{1,3}|25|50|BULL|MISS)\b/ig) || []).map(t=>t.toUpperCase());
+  // expand 3-stellige reine Zahlen smart
+  let tokens = [];
+  for(const tok of raw){
+    if(/^\d{3}$/.test(tok)){
+      const splits = splitDigitsSmart(tok);
+      if(splits.length){ 
+        // erst mal Platzhalter einsetzen, Entscheidung später mit expected
+        tokens.push({type:'split', variants:splits});
+      } else {
+        tokens.push({type:'num', val:tok});
       }
-      return {rounds};
+    } else {
+      tokens.push({type:'lit', val:tok});
     }
+  }
 
-    /***************
-     * DASHBOARD
-     ***************/
-    function renderDashboard(parsed){
-      if(!parsed?.rounds?.length){$("#roundTable").innerHTML="Keine Daten.";return;}
-      // Chart
-      const ctx=$("#scoreChart");
-      new Chart(ctx,{type:"line",data:{
-        labels:parsed.rounds.map(r=>"R"+r.round),
-        datasets:[{label:"Score",data:parsed.rounds.map(r=>r.score)}]
-      },options:{plugins:{legend:{labels:{color:"#eee"}}},scales:{x:{ticks:{color:"#eee"}},y:{ticks:{color:"#eee"}}}}});
-
-      // Tabelle
-      let html="<table><tr><th>Runde</th><th>Start</th><th>Darts</th><th>Score</th><th>Bust</th><th>Ende</th></tr>";
-      parsed.rounds.forEach(r=>{
-        html+=`<tr><td>${r.round}</td><td>${r.start}</td><td>${r.darts.join(", ")}</td><td>${r.score}</td><td>${r.bust?"✅":"❌"}</td><td>${r.end}</td></tr>`;
-      });
-      html+="</table>";
-      $("#roundTable").innerHTML=html;
+  // erzeuge Kandidaten-Listen (ersetzt 'split' durch alle Varianten)
+  function expand(list, idx=0, acc=[]){
+    if(idx===list.length) return [acc];
+    const item = list[idx];
+    if(item.type==='split'){
+      let outs = [];
+      for(const v of item.variants){
+        outs = outs.concat(expand(list, idx+1, acc.concat(v)));
+      }
+      return outs;
+    } else {
+      return expand(list, idx+1, acc.concat([item.val]));
     }
+  }
+  let cands = expand(tokens);
 
-    /***************
-     * TRAININGSPLAN (GPT + Notion)
-     ***************/
-    async function buildTrainingPlan(parsed){
-      const lastRounds=parsed.rounds.slice(-5);
-      const prompt=`Analysiere folgende Darts-Daten (letzte ${lastRounds.length} Runden) und erstelle einen detaillierten Trainingsplan im unten gezeigten Format:\n\n${JSON.stringify(lastRounds,null,2)}`;
-      const res=await fetch("https://api.openai.com/v1/chat/completions",{
-        method:"POST",
-        headers:{Authorization:`Bearer ${CONFIG.OPENAI_API_KEY}`,"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"gpt-4o-mini",
-          messages:[{role:"system",content:"Du bist ein Darts-Trainer."},{role:"user",content:prompt}]
-        })
-      });
-      const data=await res.json();
-      return data.choices?.[0]?.message?.content || JSON.stringify(data,null,2);
+  // auf exakt 3 Darts bringen
+  cands = cands.map(arr=>{
+    let out = arr.slice(0,3);
+    while(out.length<3) out.push("0");
+    return out;
+  });
+
+  // wähle beste Kandidaten: 1) exakte Summe zu expected, 2) sonst geringste „Invalidität“ + Summe nahe expected
+  function invalidity(arr){
+    // Zahlen >20 (außer 25/50) sind invalid
+    let bad=0;
+    for(const t of arr){
+      if(/^\d+$/.test(t)){
+        const n=parseInt(t,10);
+        if(!validSingle(n)) bad+=1;
+      }
     }
+    return bad;
+  }
+  function sum(arr){ return arr.reduce((a,t)=>a+(pointsOfToken(t)||0),0); }
 
-    async function sendToNotion(planText){
-      const res=await fetch("https://api.notion.com/v1/pages",{
-        method:"POST",
-        headers:{
-          "Authorization":`Bearer ${CONFIG.NOTION_API_KEY}`,
-          "Content-Type":"application/json",
-          "Notion-Version":"2022-06-28"
-        },
-        body:JSON.stringify({
-          parent:{database_id:CONFIG.NOTION_DATABASE_ID},
-          properties:{Name:{title:[{text:{content:"Darts Trainingsplan"}}]}},
-          children:[{object:"block",type:"paragraph",paragraph:{text:[{type:"text",text:{content:planText}}]}}]
-        })
-      });
-      if(!res.ok) throw new Error(await res.text());
-      return await res.json();
+  let best = cands[0] || ["0","0","0"];
+  let bestScore = { match:false, bad:999, diff:9999 };
+
+  for(const cand of cands){
+    const s = sum(cand);
+    const bad = invalidity(cand);
+    const diff = (typeof expected==='number') ? Math.abs(expected - s) : Math.abs(s); // ohne expected: nah an 0 (eher egal)
+    const match = (typeof expected==='number') && (s===expected);
+    const rank = {
+      match,
+      bad,
+      diff
+    };
+    // Ranking: match > weniger bad > kleinere diff
+    const better =
+      (rank.match && !bestScore.match) ||
+      (rank.match===bestScore.match && rank.bad < bestScore.bad) ||
+      (rank.match===bestScore.match && rank.bad===bestScore.bad && rank.diff < bestScore.diff);
+    if(better){ best=cand; bestScore=rank; }
+  }
+  return best;
+}
+
+/* ======================
+   PARSER (Spielertrennung, Start/Ende)
+====================== */
+function parseAll(ocrText, startScore=501){
+  const lines = ocrText.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+
+  // Spielernamen aus "HISTORIE <A>" + nächste Zeile als B
+  let pA="Spieler A", pB="Spieler B";
+  for(let i=0;i<lines.length;i++){
+    const m = lines[i].match(/^HISTORIE\s+(.+)$/i);
+    if(m){
+      pA = m[1].trim();
+      if(lines[i+1] && !/^RUNDE\s+\d+/i.test(lines[i+1]) && !/^\d/.test(lines[i+1])){
+        pB = lines[i+1].trim();
+      }
+      break;
     }
+  }
 
-    /***************
-     * EVENTS
-     ***************/
-    let lastParsed=null;
-    window.addEventListener('DOMContentLoaded',()=>{
-      $("#btnOCR").onclick=async()=>{
-        $("#ocrStatus").textContent="⏳ OCR läuft…";
-        const f=$("#fileInput").files?.[0]; if(!f){$("#ocrStatus").innerHTML="<span class='err'>Bitte Screenshot auswählen.</span>";return;}
-        try{
-          const b64=await fileToBase64(f);
-          const text=await runOCR(b64);
-          $("#ocrText").textContent=text;
-          lastParsed=parseDartsmind(text);
-          renderDashboard(lastParsed);
-          $("#ocrStatus").innerHTML="<span class='ok'>✓ OCR & Parser fertig</span>";
-        }catch(e){$("#ocrStatus").innerHTML=`<span class='err'>Fehler: ${e.message}</span>`;}
-      };
+  const players = {[pA]:[], [pB]:[]};
+  let startA=startScore, startB=startScore;
 
-      $("#btnPlan").onclick=async()=>{
-        if(!lastParsed){$("#planOut").textContent="Keine Daten";return;}
-        $("#planOut").textContent="⏳ Generiere Trainingsplan…";
-        try{
-          const plan=await buildTrainingPlan(lastParsed);
-          $("#planOut").textContent=plan;
-        }catch(e){$("#planOut").textContent="Fehler: "+e.message;}
-      };
+  for(let i=0;i<lines.length;i++){
+    const m=lines[i].match(/^RUNDE\s+(\d+)/i);
+    if(!m) continue;
 
-      $("#btnNotion").onclick=async()=>{
-        const plan=$("#planOut").textContent.trim();
-        if(!plan){alert("Kein Plan vorhanden");return;}
-        try{
-          const resp=await sendToNotion(plan);
-          alert("Plan nach Notion gesendet ✅");
-        }catch(e){alert("Notion Fehler: "+e.message);}
-      };
+    const round = parseInt(m[1],10);
+    const block=[]; let j=i+1;
+    while(j<lines.length && !/^RUNDE\s+\d+/i.test(lines[j])){ block.push(lines[j]); j++; }
+    i=j-1;
+
+    // potentiell angezeigte Rundenscores (nur Werte <=180 sind realistisch)
+    const roundNums = block
+      .filter(x=>/^\d{1,3}$/.test(x))
+      .map(x=>parseInt(x,10))
+      .filter(n=>n>=0 && n<=180);
+    const expA = roundNums.length>=2 ? roundNums[roundNums.length-2] : null;
+    const expB = roundNums.length>=2 ? roundNums[roundNums.length-1] : null;
+
+    // Darts-Zeilen: letzte zwei „darts-ähnlichen“ Zeilen im Block
+    const dartLines = block.filter(isDartLine);
+    const lineA = dartLines[dartLines.length-2] || "";
+    const lineB = dartLines[dartLines.length-1] || "";
+
+    const dartsA = parseDartsSmart(lineA, expA);
+    const dartsB = parseDartsSmart(lineB, expB);
+
+    const scoreA = dartsA.reduce((a,t)=>a+(pointsOfToken(t)||0),0);
+    const scoreB = dartsB.reduce((a,t)=>a+(pointsOfToken(t)||0),0);
+
+    const bustText = block.join("\n");
+    const bustA = /BUST/i.test(bustText) && scoreA===0;
+    const bustB = /BUST/i.test(bustText) && scoreB===0;
+
+    const endA = bustA ? startA : Math.max(startA - scoreA, 0);
+    const endB = bustB ? startB : Math.max(startB - scoreB, 0);
+
+    players[pA].push({ round, start:startA, darts:dartsA, score:scoreA, bust:bustA, end:endA });
+    players[pB].push({ round, start:startB, darts:dartsB, score:scoreB, bust:bustB, end:endB });
+
+    startA=endA; startB=endB;
+  }
+
+  return { players, order:[pA,pB] };
+}
+
+/* ======================
+   RENDER
+====================== */
+let parsedAll=null, currentPlayer=null, chartRef=null, orderSwap=false;
+
+function populatePlayers(){
+  const sel=$("#playerSelect");
+  sel.innerHTML="";
+  const list = (orderSwap && parsedAll?.order) ? [...parsedAll.order].reverse() : parsedAll?.order || [];
+  list.forEach(n=>{
+    const opt=document.createElement('option'); opt.value=n; opt.textContent=n; sel.appendChild(opt);
+  });
+  currentPlayer = list[0] || null;
+  $("#playerHint").textContent = list.length? `Reihenfolge: ${list.join(" • ")}` : "";
+}
+
+function renderDashboardFor(playerName){
+  const rounds = parsedAll?.players?.[playerName] || [];
+  const ctx=$("#scoreChart");
+  if(chartRef) chartRef.destroy();
+  chartRef = new Chart(ctx, {
+    type:"line",
+    data:{
+      labels: rounds.map(r=>"R"+r.round),
+      datasets:[{label:`Score – ${playerName}`, data: rounds.map(r=>r.score)}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:"#eee"}} },
+      scales:{ x:{ticks:{color:"#eee"}}, y:{ticks:{color:"#eee"}} }
+    }
+  });
+
+  let html = `<table><tr><th>Runde</th><th>Start</th><th>Darts</th><th>Score</th><th>Bust</th><th>Ende</th></tr>`;
+  rounds.forEach(r=>{
+    html += `<tr>
+      <td>${r.round}</td>
+      <td>${r.start}</td>
+      <td>${r.darts.join(", ")}</td>
+      <td>${r.score}</td>
+      <td>${r.bust ? "✅" : "❌"}</td>
+      <td>${r.end}</td>
+    </tr>`;
+  });
+  html += `</table>`;
+  $("#roundTable").innerHTML = html;
+}
+
+/* ======================
+   TRAININGSPLAN
+====================== */
+async function buildTrainingPlan(playerName){
+  const rounds = parsedAll?.players?.[playerName] || [];
+  const last = rounds.slice(-5); // 3–5; wir nehmen bis 5
+  const today = new Date().toLocaleDateString('de-DE');
+
+  const sys = "Du bist ein Darts-Coach. Du analysierst Rundendaten und erstellst einen fokussierten, umsetzbaren Trainingsplan.";
+  const user = `Erstelle einen Trainingsplan im folgenden Layout (keine Tabellen, klare Abschnitte):
+Trainingsplan für ${playerName} – ${today}
+Analyse
+- Kurz & prägnant basierend auf letzten ${last.length} Runden.
+Stärken ✅
+- 2–3 Punkte
+Schwächen ⚠️
+- 2–3 Punkte
+Heutiger Trainingsplan 🎯
+Abschnittsüberschrift | Dauer | Ziel | Begründung
+- 3–5 Übungen (z.B. Double Round the Clock, 121 Checkout Challenge, Scoring-Korridor usw.)
+Abschluss: 1 Satz mentaler Tipp.
+
+Daten (JSON):
+${JSON.stringify(last, null, 2)}`;
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method:"POST",
+    headers:{
+      "Authorization":`Bearer ${CONFIG.OPENAI_API_KEY}`,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      model:"gpt-4o-mini",
+      messages:[
+        {role:"system", content: sys},
+        {role:"user", content: user}
+      ],
+      temperature:0.6
+    })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error?.message || JSON.stringify(data));
+  return data.choices?.[0]?.message?.content?.trim() || "Kein Plan erhalten.";
+}
+
+async function sendToNotion(planText, playerName){
+  const title = `Trainingsplan für ${playerName} – ${new Date().toLocaleDateString('de-DE')}`;
+  const payload = {
+    parent: { database_id: CONFIG.NOTION_DATABASE_ID },
+    properties: {
+      Name: { title: [{ text: { content: title } }] },
+      Content: { rich_text: [{ type:"text", text:{ content: planText } }] }
+    }
+  };
+  const res = await fetch("https://api.notion.com/v1/pages", {
+    method:"POST",
+    headers:{
+      "Authorization":`Bearer ${CONFIG.NOTION_API_KEY}`,
+      "Content-Type":"application/json",
+      "Notion-Version":"2022-06-28"
+    },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(t);
+  }
+  return await res.json();
+}
+
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  // load cfg
+  const cfg = loadLocal(LS.CFG,{});
+  CONFIG.OCR_BACKEND = cfg.OCR_BACKEND || CONFIG.OCR_BACKEND;
+  CONFIG.OPENAI_API_KEY = cfg.OPENAI_API_KEY || "";
+  CONFIG.NOTION_API_KEY = cfg.NOTION_API_KEY || "";
+  CONFIG.NOTION_DATABASE_ID = cfg.NOTION_DATABASE_ID || "";
+
+  $("#cfgOcrUrl").value = CONFIG.OCR_BACKEND;
+  $("#cfgOpenAI").value = CONFIG.OPENAI_API_KEY;
+  $("#cfgNotion").value = CONFIG.NOTION_API_KEY;
+  $("#cfgDb").value = CONFIG.NOTION_DATABASE_ID;
+
+  $("#btnSaveCfg").onclick = ()=>{
+    CONFIG.OCR_BACKEND = $("#cfgOcrUrl").value.trim();
+    CONFIG.OPENAI_API_KEY = $("#cfgOpenAI").value.trim();
+    CONFIG.NOTION_API_KEY = $("#cfgNotion").value.trim();
+    CONFIG.NOTION_DATABASE_ID = $("#cfgDb").value.trim();
+    saveLocal(LS.CFG, {
+      OCR_BACKEND:CONFIG.OCR_BACKEND,
+      OPENAI_API_KEY:CONFIG.OPENAI_API_KEY,
+      NOTION_API_KEY:CONFIG.NOTION_API_KEY,
+      NOTION_DATABASE_ID:CONFIG.NOTION_DATABASE_ID
     });
-  </script>
+    $("#cfgStatus").innerHTML = `<span class="ok">✓ gespeichert</span>`;
+  };
+  $("#btnLoadCfg").onclick = ()=>{
+    const c = loadLocal(LS.CFG,{});
+    $("#cfgOcrUrl").value = c.OCR_BACKEND||"";
+    $("#cfgOpenAI").value = c.OPENAI_API_KEY||"";
+    $("#cfgNotion").value = c.NOTION_API_KEY||"";
+    $("#cfgDb").value = c.NOTION_DATABASE_ID||"";
+    $("#cfgStatus").innerHTML = `<span class="ok">✓ geladen</span>`;
+  };
+
+  $("#btnOCR").onclick = async()=>{
+    $("#ocrStatus").textContent = "⏳ OCR läuft…";
+    const f = $("#fileInput").files?.[0];
+    if(!f){ $("#ocrStatus").innerHTML=`<span class="err">Bitte Screenshot auswählen.</span>`; return; }
+    try{
+      const b64 = await fileToBase64(f);
+      const text = await runOCR(b64);
+      $("#ocrText").textContent = text;
+      saveLocal(LS.OCR, text);
+
+      parsedAll = parseAll(text, 501);
+      saveLocal(LS.PARSED, parsedAll);
+
+      populatePlayers();
+      if(currentPlayer){ renderDashboardFor(currentPlayer); }
+      $("#ocrStatus").innerHTML = `<span class="ok">✓ OCR & Parse fertig</span>`;
+    }catch(e){
+      $("#ocrStatus").innerHTML = `<span class="err">Fehler: ${e.message}</span>`;
+    }
+  };
+
+  $("#btnClear").onclick = ()=>{
+    ["OCR","PARSED"].forEach(k=>localStorage.removeItem(LS[k]));
+    $("#ocrText").textContent = "OCR-Ergebnis erscheint hier…";
+    $("#roundTable").innerHTML = "";
+    const canvas = $("#scoreChart");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(chartRef) chartRef.destroy();
+    $("#ocrStatus").textContent = "";
+  };
+
+  $("#playerSelect").onchange = (e)=>{
+    currentPlayer = e.target.value;
+    if(parsedAll) renderDashboardFor(currentPlayer);
+  };
+
+  $("#btnSwap").onclick = ()=>{
+    orderSwap = !orderSwap;
+    populatePlayers();
+    if(currentPlayer) renderDashboardFor(currentPlayer);
+    saveLocal(LS.ORDER, orderSwap);
+  };
+
+  // restore previous
+  const prevText = loadLocal(LS.OCR,"");
+  const prevParsed = loadLocal(LS.PARSED,null);
+  const prevOrder = loadLocal(LS.ORDER,false);
+  if(prevText){ $("#ocrText").textContent = prevText; }
+  if(prevParsed){
+    parsedAll = prevParsed; orderSwap = !!prevOrder;
+    populatePlayers(); if(currentPlayer) renderDashboardFor(currentPlayer);
+  }
+
+  $("#btnPlan").onclick = async()=>{
+    if(!parsedAll || !currentPlayer){ $("#planOut").textContent = "Keine Daten / kein Spieler gewählt."; return; }
+    $("#planOut").textContent = "⏳ Generiere Trainingsplan…";
+    try{
+      const plan = await buildTrainingPlan(currentPlayer);
+      $("#planOut").textContent = plan;
+    }catch(e){ $("#planOut").textContent = "Fehler: "+e.message; }
+  };
+
+  $("#btnNotion").onclick = async()=>{
+    const txt = $("#planOut").textContent.trim();
+    if(!txt){ alert("Kein Plan vorhanden."); return; }
+    try{
+      await sendToNotion(txt, currentPlayer || "Spieler");
+      alert("✅ Plan nach Notion gespeichert.");
+    }catch(e){
+      alert("Notion Fehler: "+e.message+"\n(Integration mit der Datenbank teilen & Property 'Content' existiert?)");
+    }
+  };
+});
+
+/* Global error pop */
+window.onerror = (msg, src, line, col) => {
+  alert("JS-Fehler: "+msg+" @"+line+":"+col);
+};
+</script>
 </body>
 </html>
