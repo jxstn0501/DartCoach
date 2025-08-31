@@ -2,269 +2,48 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>🏹 DartsCoach</title>
+  <title>🏹 DartsCoach Debug</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Manifest + PWA (optional, funktioniert auch ohne) -->
-  <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;DartsCoach&quot;,&quot;short_name&quot;:&quot;DartsCoach&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#121212&quot;,&quot;theme_color&quot;:&quot;#121212&quot;}" />
-  <script>
-    // Ein super simpler Service Worker für Offline-Caching
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        const swCode = `
-          const CACHE_NAME='dc-cache-v1';
-          const CORE=['./'];
-          self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(CORE)))});
-          self.addEventListener('fetch',e=>{
-            e.respondWith(
-              caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{
-                const respClone=resp.clone();
-                caches.open(CACHE_NAME).then(c=>c.put(e.request, respClone));
-                return resp;
-              }).catch(()=>r))
-            )
-          });
-        `;
-        const blob = new Blob([swCode], { type: 'text/javascript' });
-        const url = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(url);
-      });
-    }
-  </script>
-
-  <!-- Fonts + Chart.js -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
   <style>
-    :root{
-      --bg:#121212; --card:#1c1c1c; --ink:#eee; --muted:#bdbdbd; --brand:#ffcc00; --brand-2:#ffdd33;
-      --ok:#30d158; --err:#ff453a;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    header{position:sticky;top:0;z-index:2;background:#161616;padding:14px 16px;border-bottom:1px solid #222;display:flex;align-items:center;gap:10px}
-    header h1{font-size:18px;margin:0;font-weight:800;color:var(--brand)}
-    header .spacer{flex:1}
-    main{padding:16px;max-width:900px;margin:0 auto}
-    .card{background:var(--card);border:1px solid #242424;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 6px 20px rgba(0,0,0,.25)}
-    h2{font-size:16px;margin:0 0 10px;font-weight:800}
-    p{margin:8px 0;color:var(--muted)}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .row > *{flex:1 1 260px}
-    button{background:var(--brand);color:#000;border:none;border-radius:10px;padding:12px 14px;font-weight:800;cursor:pointer}
-    button:hover{background:var(--brand-2)}
-    button.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
-    .pill{display:inline-flex;align-items:center;gap:8px;background:#222;border:1px solid #2a2a2a;border-radius:999px;padding:8px 12px}
-    input[type="file"]{display:block;margin-top:8px}
-    .mono{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;background:#111;border:1px solid #222;border-radius:10px;padding:10px}
-    .list{list-style:none;padding:0;margin:0}
-    .list li{background:#191919;border:1px solid #232323;border-radius:10px;padding:10px;margin:6px 0}
-    .ok{color:var(--ok)} .err{color:var(--err)}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:700px){.grid2{grid-template-columns:1fr}}
-    .small{font-size:12px;color:#9a9a9a}
-    .label{display:block;font-size:12px;margin-top:8px;color:#9a9a9a}
-    canvas{max-width:100%;background:#101010;border:1px solid #222;border-radius:10px;padding:6px}
-    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#222;border:1px solid #333;border-radius:6px;padding:2px 6px}
+    body{background:#121212;color:#eee;font-family:Arial,Helvetica,sans-serif;margin:0;padding:20px}
+    h1{color:#ffcc00}
+    .card{background:#1e1e1e;border:1px solid #333;border-radius:10px;padding:16px;margin:12px 0}
+    button{background:#ffcc00;border:none;border-radius:8px;padding:10px 14px;font-weight:bold;cursor:pointer}
+    .mono{white-space:pre-wrap;background:#111;border:1px solid #333;border-radius:8px;padding:10px;font-family:monospace}
+    .ok{color:#30d158}.err{color:#ff453a}
   </style>
 </head>
 <body>
-  <header>
-    <h1>🏹 DartsCoach</h1>
-    <div class="spacer"></div>
-    <span class="pill small">PWA · Offline · Local Save</span>
-  </header>
+  <h1>🏹 DartsCoach (Debug-Version)</h1>
 
-  <main>
-    <!-- CONFIG -->
-    <div class="card">
-      <h2>🔑 Konfiguration</h2>
-      <div class="grid2">
-        <div>
-          <label class="label">Vision API Key</label>
-          <input id="cfgVision" placeholder="AIza... (Vision API Key)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a2a;background:#111;color:#eee">
-          <label class="label">Optional: Google OAuth Client ID (für Cloud Storage Upload)</label>
-          <input id="cfgClient" placeholder="YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com" style="width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a2a;background:#111;color:#eee">
-          <label class="label">Optional: Cloud Storage Bucket</label>
-          <input id="cfgBucket" placeholder="mein-bucket-name" style="width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a2a;background:#111;color:#eee">
-          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-            <button id="btnSaveCfg">Speichern</button>
-            <button class="ghost" id="btnLoadCfg">Laden</button>
-            <span id="cfgStatus" class="small"></span>
-          </div>
-        </div>
-        <div>
-          <p class="small">
-            🔸 Trage oben deinen <b>Vision API Key</b> ein (Google Cloud → APIs & Services → Credentials).<br>
-            🔸 Für Upload in dein <b>Cloud Storage Bucket</b> brauchst du zusätzlich einen
-            <span class="kbd">Web OAuth Client</span> und den <span class="kbd">Bucket-Namen</span> (optional).<br>
-            🔸 Alles wird lokal im Browser gespeichert (LocalStorage).
-          </p>
-          <p class="small">
-            Tipp: Du kannst die App als PWA zum iPhone-Homescreen hinzufügen
-            (Teilen → Zum Home-Bildschirm).
-          </p>
-        </div>
-      </div>
+  <div class="card">
+    <h2>🔑 Konfiguration</h2>
+    <p>API-Key ist schon im Code eingetragen.</p>
+    <div id="cfgStatus" class="ok">✓ Vision API Key geladen</div>
+  </div>
+
+  <div class="card">
+    <h2>📤 Screenshot importieren & OCR</h2>
+    <input type="file" id="fileInput" accept="image/*" />
+    <button id="btnOCR">OCR starten</button>
+    <div id="ocrStatus" style="margin-top:8px"></div>
+    <div id="ocrText" class="mono" style="margin-top:10px;min-height:120px">
+      OCR-Ergebnis erscheint hier…
     </div>
-
-    <!-- IMPORT -->
-    <div class="card">
-      <h2>📤 Screenshot importieren & OCR</h2>
-      <div class="row">
-        <div>
-          <input type="file" id="fileInput" accept="image/*" />
-          <button id="btnOCR">OCR starten</button>
-          <button class="ghost" id="btnClearOCR">Löschen</button>
-          <div id="ocrStatus" class="small" style="margin-top:8px"></div>
-        </div>
-        <div>
-          <div id="ocrText" class="mono" style="min-height:84px">OCR-Ergebnis erscheint hier…</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PARSE -->
-    <div class="card">
-      <h2>🧩 Parse & Struktur</h2>
-      <div class="row">
-        <div>
-          <button id="btnParse">OCR → Runden & Header parsen</button>
-          <button class="ghost" id="btnSaveMatch">Match speichern</button>
-          <div class="small" id="parseStatus" style="margin-top:6px"></div>
-        </div>
-        <div id="parsedPreview" class="mono" style="min-height:84px">Noch nichts geparst…</div>
-      </div>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div class="card">
-      <h2>📊 Dashboard</h2>
-      <div class="grid2">
-        <div>
-          <canvas id="chartScores" height="180"></canvas>
-        </div>
-        <div>
-          <ul class="list" id="statsList">
-            <li>Spiele gesamt: <b id="statMatches">0</b></li>
-            <li>Ø 3-Dart-Average (letztes Spiel): <b id="statAvg">–</b></li>
-            <li>Checkout % (aus Header): <b id="statCO">–</b></li>
-            <li>First 9 PPR (aus Header): <b id="statF9">–</b></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- TRAININGSPLAN -->
-    <div class="card">
-      <h2>🎯 Trainingsplan</h2>
-      <div class="row">
-        <div>
-          <button id="btnPlan">Trainingsplan abrufen</button>
-          <button class="ghost" id="btnSavePlan">Plan speichern</button>
-        </div>
-        <div id="planOut" class="mono" style="min-height:84px">Hier erscheint dein Plan…</div>
-      </div>
-      <p class="small">Hinweis: Der Plan ist regelbasiert (offline). Später kannst du ihn optional per Vertex/LLM generieren.</p>
-    </div>
-
-    <!-- GESPEICHERTE PLÄNE -->
-    <div class="card">
-      <h2>💾 Gespeicherte Trainingspläne</h2>
-      <ul class="list" id="plansList"></ul>
-    </div>
-
-    <!-- MATCHES & EXPORT -->
-    <div class="card">
-      <h2>🗂️ Gespeicherte Matches</h2>
-      <div class="row">
-        <div>
-          <button id="btnExport">Als JSON exportieren</button>
-          <button class="ghost" id="btnUploadGCS">In Cloud Storage hochladen (optional)</button>
-          <div class="small" id="exportStatus" style="margin-top:6px"></div>
-        </div>
-        <div id="matchesOut" class="mono" style="min-height:120px">Noch keine Spiele gespeichert…</div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Google Identity Services (für GCS Upload, optional) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </div>
 
   <script>
     /***************
-     * KONFIG ↓↓↓  *
+     * KONFIG      *
      ***************/
     const CONFIG = {
-      VISION_API_KEY: "",                 // <— Hier deinen Vision API Key eintragen
-      GOOGLE_CLIENT_ID: "",               // <— Optional: OAuth Client ID (Web) für GCS Upload
-      BUCKET_NAME: "",                    // <— Optional: Dein Storage Bucket (nur Name, ohne gs://)
-      // Upload-Ziel-Dateinamen-Präfix:
-      GCS_PREFIX: "dartscoach",
+      VISION_API_KEY: "AIzaSyAg3Vtec5ota1LYC5URMLjHz8Y-IhogQyc" // <-- dein Key
     };
 
-    /*******************
-     * STATE & STORAGE *
-     *******************/
-    const LS_KEYS = {
-      CFG: "dc_cfg",
-      OCR: "dc_last_ocr",
-      PARSED: "dc_last_parsed",
-      MATCHES: "dc_matches",
-      PLANS: "dc_plans"
-    };
-
-    const state = {
-      matches: [],
-      plans: [],
-      lastParsed: null,
-      chart: null,
-      accessToken: null // OAuth Token (optional, für GCS)
-    };
-
-    function saveLocal(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-    function loadLocal(key, def=null){
-      try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }catch(e){ return def; }
-    }
-
-    /************
-     * HELPERS  *
-     ************/
+    /***************
+     * HELPERS     *
+     ***************/
     const $ = sel => document.querySelector(sel);
-    function ts(){ return new Date().toISOString().replace('T',' ').slice(0,19); }
-    function download(filename, data){
-      const blob = new Blob([data], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
-      URL.revokeObjectURL(url);
-    }
-    function fmt(n){ return Number(n).toFixed(2); }
-
-    /************************
-     * OCR via Vision API   *
-     ************************/
-    async function runOCR(base64){
-      if(!CONFIG.VISION_API_KEY){ throw new Error("Vision API Key fehlt (Konfiguration)."); }
-      const body = {
-        requests: [{
-          image: { content: base64 },
-          features: [{ type: "TEXT_DETECTION" }]
-        }]
-      };
-      const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${CONFIG.VISION_API_KEY}`, {
-        method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)
-      });
-      const json = await res.json();
-console.log("Vision API Antwort:", json); // <-- Debug in Browser-Konsole
-
-if (json.error) {
-  return `Fehler: ${json.error.message}`;
-}
-
-const text = json?.responses?.[0]?.fullTextAnnotation?.text;
-return text || "Keine Texte erkannt.";
 
     function fileToBase64(file){
       return new Promise((resolve,reject)=>{
@@ -275,336 +54,70 @@ return text || "Keine Texte erkannt.";
       });
     }
 
-    /***************************
-     * Dartsmind Text -> Daten *
-     ***************************/
-    // Sehr robuste, aber heuristische Parser-Logik:
-    // - Header-Werte: First 9 PPR / PPR / Darts thrown / Checkout% / Attempts
-    // - Runden: erkennt "Runde|Round <nr>" + evtl. Startscore + 3 Darts wie T20, D2, 20
-    function parseDartsmind(ocrText){
-      const lines = ocrText.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-
-      // Header-Felder sammeln
-      const header = {};
-      const getNum = s => parseFloat((s.match(/-?\d+([.,]\d+)?/g)||[]).join('.').replace(',', '.'));
-      for (const ln of lines){
-        const l = ln.toLowerCase();
-        if (l.includes('first 9')) header.first9 = getNum(ln);
-        if (l.match(/\bppr\b/) && !l.includes('first 9')) header.ppr = getNum(ln);
-        if (l.includes('darts') && (l.includes('geworfen') || l.includes('thrown'))) header.dartsThrown = getNum(ln);
-        if (l.includes('checkout') && l.includes('%')) header.checkoutPct = getNum(ln);
-        if (l.includes('checkout') && (l.includes('versuche') || l.includes('attempt'))) header.checkoutAttempts = getNum(ln);
+    /***************
+     * OCR LOGIK   *
+     ***************/
+    async function runOCR(base64){
+      if(!CONFIG.VISION_API_KEY){ 
+        throw new Error("Vision API Key fehlt (Konfiguration)."); 
       }
-
-      // Runden erkennen
-      const rounds = [];
-      let current = null;
-
-      function pushCurrent(){
-        if (!current) return;
-        // Punkte je Dart berechnen
-        const dartPoints = current.darts.map(tok => {
-          const t = tok.toUpperCase();
-          if (/^T(\d{1,2})$/.test(t)) return 3*parseInt(t.slice(1),10);
-          if (/^D(\d{1,2})$/.test(t)) return 2*parseInt(t.slice(1),10);
-          if (/^(S)?(\d{1,2})$/.test(t)) return parseInt(t.replace('S',''),10);
-          if (t === 'BULL' || t === 'DBULL' || t === 'BULLSEYE' || t==='50') return 50;
-          if (t === '25' || t === 'OBULL') return 25;
-          if (t === 'MISS' || t === '0' || t === '-') return 0;
-          return 0;
-        });
-        const roundScore = dartPoints.reduce((a,b)=>a+b,0);
-        const end = (current.start!=null)? Math.max(current.start - roundScore, 0) : null;
-        rounds.push({...current, points: dartPoints, roundScore, end});
-        current = null;
-      }
-
-      for (const ln of lines){
-        const mRound = ln.match(/^(?:runde|round)\s*(\d+)/i);
-        if (mRound){
-          pushCurrent();
-          current = { round: parseInt(mRound[1],10), start: null, darts: [] };
-          continue;
-        }
-        if (!current) continue;
-        // Startscore
-        const mStart = ln.match(/(start|rest|score|startscore)\D*(\d{2,3})/i) || ln.match(/(\b\d{2,3}\b)\s*(?:start|rest)/i);
-        if (mStart && current.start==null){
-          const s = parseInt(mStart[2] || mStart[1],10);
-          if (!Number.isNaN(s)) current.start = s;
-        }
-        // Darts Tokens extrahieren (T20, D2, 20, 25, BULL, MISS)
-        const toks = ln.match(/\b(T\d{1,2}|D\d{1,2}|S\d{1,2}|\d{1,2}|25|50|OBULL|DBULL|BULL|MISS)\b/ig);
-        if (toks && toks.length){
-          current.darts = current.darts.concat(toks.slice(0,3)); // maximal 3 nehmen
-        }
-        // Falls wir genug Infos haben und die nächste Zeile keine Runde ist, geht's einfach weiter
-      }
-      pushCurrent();
-
-      // Versuch, Startscore zu füllen, wenn leer (typisch 501)
-      for (let i=0;i<rounds.length;i++){
-        if (rounds[i].start==null){
-          if (i===0){ rounds[i].start = 501; }
-          else { rounds[i].start = rounds[i-1].end ?? 501; }
-          rounds[i].end = Math.max(rounds[i].start - rounds[i].roundScore, 0);
-        }
-      }
-
-      // einfache Summaries
-      const totalScored = rounds.reduce((a,r)=>a+r.roundScore,0);
-      const dartsCount = rounds.reduce((a,r)=>a+(r.darts?.length||0),0);
-      const avg3 = dartsCount>0 ? (totalScored / dartsCount)*3 : null;
-
-      return {
-        header, rounds,
-        summary:{
-          totalScored, dartsCount, avg3
-        }
+      const body = {
+        requests: [{
+          image: { content: base64 },
+          features: [{ type: "TEXT_DETECTION" }]
+        }]
       };
-    }
 
-    /*********************
-     * TRAININGS-LOGIK   *
-     *********************/
-    // Regelbasierter Plan basierend auf Header + Runden
-    function buildPlan(parsed){
-      const {header={}, summary={}, rounds=[]} = parsed||{};
-      const f9 = header.first9 ?? null;
-      const ppr = header.ppr ?? (summary.avg3||null);
-      const co = header.checkoutPct ?? null;
-
-      const lines = [];
-      lines.push(`Datum: ${new Date().toLocaleString()}`);
-      if (ppr) lines.push(`Letzter 3-Dart-Average: ${fmt(ppr)}`);
-      if (f9) lines.push(`First 9 PPR: ${fmt(f9)}`);
-      if (co!=null) lines.push(`Checkout-Quote: ${fmt(co)}%`);
-
-      lines.push("");
-      lines.push("Empfehlungen:");
-
-      // Heuristiken
-      if (co!=null && co < 30){
-        lines.push("• 20× Doppel-16 + 20× Doppel-20 (Fokus Checkouts)");
-        lines.push("• 15 Minuten Checkout-Szenarien (41–60 Rest, 61–80 Rest)");
-      } else {
-        lines.push("• 10 Minuten Doppel-Ringe Rotation (D16, D20, D8)");
-      }
-
-      if (ppr && ppr < 55){
-        lines.push("• 15 Minuten Scoring-Drill: 100 Würfe T20 (Treffer notieren)");
-      } else {
-        lines.push("• 10 Minuten Triple-Wechsel: T20 → T19 → T18 im Loop");
-      }
-
-      // Analyse aus Runden: viele „0/MISS“ ⇒ Wurfkonstanz
-      const missCount = rounds.reduce((a,r)=>a+r.darts.filter(d=>String(d).toUpperCase()==='MISS' || d==='0' || d==='-').length,0);
-      if (missCount >= 3){
-        lines.push("• 10 Minuten ruhiger Wurf-Rhythmus (kein Scoring-Ziel, nur Technik)");
-      }
-
-      lines.push("");
-      lines.push("Cooldown: 10 Minuten freie Legs mit Fokus auf Ruhe vor Checkouts.");
-      return lines.join("\n");
-    }
-
-    /*********************
-     * RENDER & CHART    *
-     *********************/
-    function refreshUI(){
-      // Matches/Pläne laden
-      state.matches = loadLocal(LS_KEYS.MATCHES, []);
-      state.plans = loadLocal(LS_KEYS.PLANS, []);
-      $("#matchesOut").textContent = JSON.stringify(state.matches, null, 2) || "Noch keine Spiele gespeichert…";
-      const ul = $("#plansList"); ul.innerHTML = "";
-      state.plans.slice().reverse().forEach(p=>{
-        const li=document.createElement('li');
-        li.innerHTML = `<b>${p.title}</b><div class="small">${p.date}</div><div class="mono" style="margin-top:6px">${p.text}</div>`;
-        ul.appendChild(li);
-      });
-
-      // Dashboard Stats
-      $("#statMatches").textContent = state.matches.length;
-      const last = state.matches.at(-1);
-      $("#statAvg").textContent = last?.parsed?.summary?.avg3 ? fmt(last.parsed.summary.avg3) : "–";
-      $("#statCO").textContent = last?.parsed?.header?.checkoutPct!=null ? fmt(last.parsed.header.checkoutPct)+"%" : "–";
-      $("#statF9").textContent = last?.parsed?.header?.first9!=null ? fmt(last.parsed.header.first9) : "–";
-
-      // Chart: letzter Match – Rundenscores
-      const labels = last?.parsed?.rounds?.map(r=>"R"+r.round) || [];
-      const data = last?.parsed?.rounds?.map(r=>r.roundScore) || [];
-      const ctx = $("#chartScores");
-      if (state.chart){ state.chart.destroy(); }
-      state.chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: 'Rundenscore', data }]},
-        options: {
-          responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{display:true} },
-          scales:{ x:{ grid:{color:'#222'} }, y:{ grid:{color:'#222'} } }
+      const res = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${CONFIG.VISION_API_KEY}`,
+        {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(body)
         }
-      });
-    }
+      );
 
-    /***********************
-     * EXPORT / CLOUD UP   *
-     ***********************/
-    function exportJSON(){
-      const payload = { createdAt: new Date().toISOString(), matches: state.matches };
-      const name = `dartscoach_export_${new Date().toISOString().slice(0,10)}.json`;
-      download(name, JSON.stringify(payload, null, 2));
-      $("#exportStatus").innerHTML = `<span class="ok">✓ Export als ${name} heruntergeladen.</span>`;
-    }
+      const json = await res.json();
+      console.log("🔎 Vision API Antwort:", json);
 
-    // Google OAuth → Bearer Token
-    function ensureGoogleToken(){
-      return new Promise((resolve,reject)=>{
-        if (!CONFIG.GOOGLE_CLIENT_ID) return reject(new Error("GOOGLE_CLIENT_ID fehlt."));
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CONFIG.GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/devstorage.read_write',
-          callback: (resp) => {
-            if (resp && resp.access_token){ state.accessToken = resp.access_token; resolve(resp.access_token); }
-            else reject(new Error("Kein Access Token erhalten."));
-          }
-        });
-        tokenClient.requestAccessToken({prompt:'consent'});
-      });
-    }
-
-    async function uploadToGCS(){
-      try{
-        if (!CONFIG.BUCKET_NAME) throw new Error("BUCKET_NAME fehlt.");
-        if (!state.matches.length) throw new Error("Keine Matches vorhanden.");
-
-        const token = state.accessToken || await ensureGoogleToken();
-        const payload = { uploadedAt: new Date().toISOString(), matches: state.matches };
-        const name = `${CONFIG.GCS_PREFIX}/matches_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
-
-        const url = `https://storage.googleapis.com/upload/storage/v1/b/${encodeURIComponent(CONFIG.BUCKET_NAME)}/o?uploadType=media&name=${encodeURIComponent(name)}`;
-        const res = await fetch(url, {
-          method:'POST',
-          headers:{
-            'Authorization':`Bearer ${token}`,
-            'Content-Type':'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok){
-          const t = await res.text();
-          throw new Error(`Upload fehlgeschlagen: ${res.status} ${t}`);
-        }
-        const json = await res.json();
-        $("#exportStatus").innerHTML = `<span class="ok">✓ In Cloud Storage hochgeladen als <b>${json.name}</b>.</span>`;
-      }catch(err){
-        $("#exportStatus").innerHTML = `<span class="err">✗ ${err.message}</span>`;
+      if (json.error) {
+        return `❌ Fehler von API: ${json.error.message}`;
       }
+
+      const text = json.responses?.[0]?.fullTextAnnotation?.text;
+      if (!text) {
+        return "⚠️ Keine Texte erkannt oder Antwort leer:\n" + JSON.stringify(json.responses[0], null, 2);
+      }
+
+      return text;
     }
 
-    /****************
-     * BOOTSTRAP    *
-     ****************/
+    /***************
+     * EVENTS      *
+     ***************/
     window.addEventListener('DOMContentLoaded', ()=>{
-      // Config laden
-      const cfg = loadLocal(LS_KEYS.CFG, {});
-      if (cfg.VISION_API_KEY) CONFIG.VISION_API_KEY = cfg.VISION_API_KEY;
-      if (cfg.GOOGLE_CLIENT_ID) CONFIG.GOOGLE_CLIENT_ID = cfg.GOOGLE_CLIENT_ID;
-      if (cfg.BUCKET_NAME) CONFIG.BUCKET_NAME = cfg.BUCKET_NAME;
-
-      $("#cfgVision").value = CONFIG.VISION_API_KEY || "";
-      $("#cfgClient").value = CONFIG.GOOGLE_CLIENT_ID || "";
-      $("#cfgBucket").value = CONFIG.BUCKET_NAME || "";
-
-      // Buttons
-      $("#btnSaveCfg").onclick = ()=>{
-        CONFIG.VISION_API_KEY = $("#cfgVision").value.trim();
-        CONFIG.GOOGLE_CLIENT_ID = $("#cfgClient").value.trim();
-        CONFIG.BUCKET_NAME = $("#cfgBucket").value.trim();
-        saveLocal(LS_KEYS.CFG, {
-          VISION_API_KEY: CONFIG.VISION_API_KEY,
-          GOOGLE_CLIENT_ID: CONFIG.GOOGLE_CLIENT_ID,
-          BUCKET_NAME: CONFIG.BUCKET_NAME
-        });
-        $("#cfgStatus").innerHTML = `<span class="ok">✓ Konfiguration gespeichert</span>`;
-      };
-      $("#btnLoadCfg").onclick = ()=>{
-        const c = loadLocal(LS_KEYS.CFG, {});
-        $("#cfgVision").value = c.VISION_API_KEY||"";
-        $("#cfgClient").value = c.GOOGLE_CLIENT_ID||"";
-        $("#cfgBucket").value = c.BUCKET_NAME||"";
-        $("#cfgStatus").innerHTML = `<span class="ok">✓ Konfiguration geladen</span>`;
-      };
-
       $("#btnOCR").onclick = async ()=>{
         $("#ocrStatus").textContent = "⏳ OCR läuft…";
         const f = $("#fileInput").files?.[0];
         if (!f){ $("#ocrStatus").innerHTML = `<span class="err">Bitte Screenshot auswählen.</span>`; return; }
+
         try{
           const b64 = await fileToBase64(f);
           const text = await runOCR(b64);
-          saveLocal(LS_KEYS.OCR, text);
-          $("#ocrText").textContent = text || "(leer)";
+          $("#ocrText").textContent = text;
           $("#ocrStatus").innerHTML = `<span class="ok">✓ OCR fertig</span>`;
         }catch(e){
           $("#ocrStatus").innerHTML = `<span class="err">Fehler: ${e.message}</span>`;
         }
       };
-      $("#btnClearOCR").onclick = ()=>{
-        localStorage.removeItem(LS_KEYS.OCR);
-        $("#ocrText").textContent = "OCR-Ergebnis erscheint hier…";
-        $("#ocrStatus").textContent = "";
-      };
-
-      // Vorheriges OCR laden (falls vorhanden)
-      const prevOCR = loadLocal(LS_KEYS.OCR, "");
-      if (prevOCR) $("#ocrText").textContent = prevOCR;
-
-      $("#btnParse").onclick = ()=>{
-        const text = $("#ocrText").textContent || "";
-        if (!text.trim()){ $("#parseStatus").innerHTML = `<span class="err">Kein OCR-Text vorhanden.</span>`; return; }
-        const parsed = parseDartsmind(text);
-        state.lastParsed = parsed;
-        saveLocal(LS_KEYS.PARSED, parsed);
-        $("#parsedPreview").textContent = JSON.stringify(parsed, null, 2);
-        $("#parseStatus").innerHTML = `<span class="ok">✓ Geparst</span>`;
-      };
-
-      $("#btnSaveMatch").onclick = ()=>{
-        const parsed = state.lastParsed || loadLocal(LS_KEYS.PARSED, null);
-        if (!parsed){ $("#parseStatus").innerHTML = `<span class="err">Nichts geparst zum Speichern.</span>`; return; }
-        const match = {
-          id: "match_" + Date.now(),
-          createdAt: new Date().toISOString(),
-          parsed
-        };
-        const arr = loadLocal(LS_KEYS.MATCHES, []);
-        arr.push(match);
-        saveLocal(LS_KEYS.MATCHES, arr);
-        $("#parseStatus").innerHTML = `<span class="ok">✓ Match gespeichert</span>`;
-        refreshUI();
-      };
-
-      $("#btnPlan").onclick = ()=>{
-        const last = loadLocal(LS_KEYS.MATCHES, []).at(-1) || { parsed: loadLocal(LS_KEYS.PARSED, null) };
-        if (!last?.parsed){ $("#planOut").textContent = "Keine Daten vorhanden."; return; }
-        const plan = buildPlan(last.parsed);
-        $("#planOut").textContent = plan;
-      };
-
-      $("#btnSavePlan").onclick = ()=>{
-        const txt = $("#planOut").textContent.trim();
-        if (!txt){ return; }
-        const plans = loadLocal(LS_KEYS.PLANS, []);
-        plans.push({ title: `Plan ${new Date().toLocaleString()}`, date: new Date().toLocaleString(), text: txt });
-        saveLocal(LS_KEYS.PLANS, plans);
-        refreshUI();
-      };
-
-      $("#btnExport").onclick = exportJSON;
-      $("#btnUploadGCS").onclick = uploadToGCS;
-
-      refreshUI();
     });
+
+    /***************
+     * DEBUG HOOK  *
+     ***************/
+    window.onerror = (msg, src, line, col, err) => {
+      alert("JS-Fehler: " + msg + " @ " + line + ":" + col);
+    };
   </script>
 </body>
 </html>
