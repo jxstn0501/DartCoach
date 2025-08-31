@@ -57,42 +57,28 @@
     /***************
      * OCR LOGIK   *
      ***************/
-    async function runOCR(base64){
-      if(!CONFIG.VISION_API_KEY){ 
-        throw new Error("Vision API Key fehlt (Konfiguration)."); 
-      }
-      const body = {
-        requests: [{
-          image: { content: base64 },
-          features: [{ type: "TEXT_DETECTION" }]
-        }]
-      };
+async function runOCR(base64){
+  const res = await fetch("https://visionnow-81553987588.europe-west1.run.app/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageBase64: base64 })
+  });
 
-      const res = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${CONFIG.VISION_API_KEY}`,
-        {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(body)
-        }
-      );
+  const json = await res.json();
+  console.log("Antwort von Cloud Run:", json);
 
-      const json = await res.json();
-      console.log("🔎 Vision API Antwort:", json);
+  if (json.error) {
+    return `❌ Fehler: ${json.error}`;
+  }
 
-      if (json.error) {
-        return `❌ Fehler von API: ${json.error.message}`;
-      }
+  const text = json?.textAnnotations?.[0]?.description 
+            || json?.fullTextAnnotation?.text 
+            || JSON.stringify(json, null, 2);
 
-      const text = json.responses?.[0]?.fullTextAnnotation?.text;
-      if (!text) {
-        return "⚠️ Keine Texte erkannt oder Antwort leer:\n" + JSON.stringify(json.responses[0], null, 2);
-      }
+  return text;
+}  
 
-      return text;
-    }
-
-    /***************
+ /***************
      * EVENTS      *
      ***************/
     window.addEventListener('DOMContentLoaded', ()=>{
